@@ -1,0 +1,5 @@
+{"prompt":"I am so happy with your service! ->","completion":" positive"}
+{"prompt":"I am very disappointed with your service ->","completion":" negative"}
+{"prompt":"I am getting very bad service ->","completion":" negative"}
+{"prompt":"I am happy ->","completion":" positive"}
+{"prompt":"I am angry ->","completion":" negative"}

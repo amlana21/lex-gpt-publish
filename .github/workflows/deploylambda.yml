@@ -1,0 +1,63 @@
+name: Deploy Chat GPT API Lambda
+
+on:
+  push:
+    branches:
+    - main
+
+jobs:
+  create_s3:
+    name: Create S3 bucket for Terraform state
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_DEFAULT_REGION}}
+    - name: Create S3 bucket
+      run: |
+        aws s3 mb s3://<bucket_name>
+  build_and_deploy:
+    name: Build and Deploy Lambda
+    runs-on: ubuntu-latest
+    needs: create_s3
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_DEFAULT_REGION}}
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.9' 
+    - name: Install Python packages
+      run: |
+        cd lambda_code/app_code
+        pip install -r requirements.txt -t .
+        zip -r app.zip ./*
+        cp app.zip <root_folder>/app.zip
+        cd ../..
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1
+    - name: Terraform Init
+      id: init
+      run: |
+        terraform init
+    - name: Terraform Plan
+      id: plan
+      run: |
+        terraform plan -no-color -input=false
+      continue-on-error: true
+    - name: Terraform Plan Status
+      if: steps.plan.outcome == 'failure'
+      run: exit 1
+    - name: Terraform Apply
+      run: |
+        terraform apply -auto-approve -input=false
